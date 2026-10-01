@@ -12,7 +12,7 @@ config_version=5
 
 config/name="MobileFPS"
 config/description="一个用 Godot 4.7 写的手机 3D 第一人称射击模板：触屏摇杆、射线射击、追踪敌人、波次刷新。"
-config/version="1.0.0"
+config/version="1.1.0"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"

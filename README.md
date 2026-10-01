@@ -81,13 +81,15 @@ git push -u origin main
 
 **想要永久下载链接？** 打一个标签就会自动发 Release。
 
-这个工程的本地仓库**已经建好了**，`v1.0.0` 标签也**已经打好了**（指向首次提交）。所以你只要在推完代码之后，把这个标签也推上去：
+本仓库已经有 `v1.0.0`（初始版本）和 `v1.1.0`（加入 CC0 素材与多武器）两个标签。
+如果你重新 clone 了一份模板、想给新仓库发第一个版本：
 
 ```bash
-git push origin v1.0.0
+git tag -a v1.1.0 -m "v1.1.0"
+git push origin main && git push origin v1.1.0
 ```
 
-云端会再跑一次构建，这次会额外在 **Releases** 页面生成一个版本，附件就是 APK 和 Windows 版，**下载链接不会过期**。
+云端会再跑一次构建，这次会额外在 **Releases** 页面生成一个版本，附件就是 APK 和 Windows 版，**下载链接不会过期**。手机上直接点开链接就能下，不用解压、不用登录。
 
 > 标签必须先推分支、再推标签。只推标签而分支上没有对应提交的话，Releases 页面点进源码会 404。
 
@@ -95,11 +97,12 @@ git push origin v1.0.0
 
 ```bash
 git add . && git commit -m "修了 xxx"
-git tag -a v1.0.1 -m "v1.0.1"
-git push origin main && git push origin v1.0.1
+git tag -a v1.1.1 -m "v1.1.1"
+git push origin main && git push origin v1.1.1
 ```
 
 > `version/code` 每次发版**必须递增**（1、2、3…），否则手机会拒绝安装新包，或者把新包当成旧包不更新。
+> 当前是 `version/name="1.1.0"` / `version/code=2`。
 
 ---
 
