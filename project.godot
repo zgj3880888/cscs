@@ -41,6 +41,11 @@ common/physics_ticks_per_second=60
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+; 安卓导出强制要求：至少启用一种移动端 VRAM 纹理压缩格式，否则导出时报
+; "ETC2/ASTC texture compression is required for Android export" 并直接失败。
+; 不写这一行时，Godot 会回退去问宿主系统偏好哪种格式；在 Linux 构建机上返回的是
+; 桌面格式（S3TC/BPTC），于是校验不通过 —— 本地在 Windows 上跑反而看不出来。
+textures/vram_compression/import_etc2_astc=true
 textures/default_filters/anisotropic_filtering_level=0
 anti_aliasing/quality/msaa_3d=0
 lights_and_shadows/directional_shadow/size=2048
