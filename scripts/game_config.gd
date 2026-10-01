@@ -112,6 +112,22 @@ func _register_all_actions() -> void:
 	_add_action("reload", [_key(KEY_R), _pad_button(JOY_BUTTON_X)])
 	_add_action("pause", [_key(KEY_ESCAPE), _pad_button(JOY_BUTTON_START)])
 
+	# ---- 切枪 ----
+	# 数字键直选，Q / 滚轮循环。触屏的"换枪"按钮按的是 weapon_next。
+	_add_action("weapon_1", [_key(KEY_1)])
+	_add_action("weapon_2", [_key(KEY_2)])
+	_add_action("weapon_3", [_key(KEY_3)])
+	_add_action("weapon_4", [_key(KEY_4)])
+	_add_action("weapon_next", [
+		_key(KEY_Q),
+		_pad_button(JOY_BUTTON_DPAD_RIGHT),
+		_wheel_down(),
+	])
+	_add_action("weapon_prev", [
+		_pad_button(JOY_BUTTON_DPAD_LEFT),
+		_wheel_up(),
+	])
+
 	# ---- UI（沿用引擎内置动作，不覆盖） ----
 	for ui_action in ["ui_accept", "ui_cancel"]:
 		if not InputMap.has_action(ui_action):
@@ -151,3 +167,11 @@ func _pad_axis(axis: JoyAxis, value: float) -> InputEventJoypadMotion:
 	event.axis = axis
 	event.axis_value = value
 	return event
+
+
+func _wheel_up() -> InputEventMouseButton:
+	return _mouse(MOUSE_BUTTON_WHEEL_UP)
+
+
+func _wheel_down() -> InputEventMouseButton:
+	return _mouse(MOUSE_BUTTON_WHEEL_DOWN)

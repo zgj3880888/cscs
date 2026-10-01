@@ -94,6 +94,7 @@ func _build_buttons() -> void:
 	# 这里按半径从小到大排，保证小按钮不会被大按钮"吃掉"。
 	_buttons = [
 		TouchButton.new(&"pause", "暂停", 34.0),
+		TouchButton.new(&"weapon_next", "换枪", 46.0),
 		TouchButton.new(&"reload", "换弹", 54.0),
 		TouchButton.new(&"jump", "跳跃", 58.0),
 		TouchButton.new(&"fire", "开火", 82.0),
@@ -125,6 +126,11 @@ func _relayout() -> void:
 				button.center = Vector2(
 					size.x - margin - 205.0 * factor,
 					size.y - margin - 12.0 * factor
+				)
+			&"weapon_next":
+				button.center = Vector2(
+					size.x - margin - 335.0 * factor,
+					size.y - margin - 25.0 * factor
 				)
 			&"pause":
 				button.center = Vector2(size.x - 52.0 * factor, 52.0 * factor)

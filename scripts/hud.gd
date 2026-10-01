@@ -27,6 +27,7 @@ var _damage_overlay: ColorRect
 var _health_fill: ColorRect
 var _health_label: Label
 var _ammo_label: Label
+var _weapon_label: Label
 var _score_label: Label
 var _wave_label: Label
 var _hint_label: Label
@@ -79,7 +80,9 @@ func bind_player(player: Player) -> void:
 		_weapon.reload_started.connect(_on_reload_started)
 		_weapon.reload_finished.connect(_on_reload_finished)
 		_weapon.hit_target.connect(_on_hit_target)
+		_weapon.weapon_changed.connect(_on_weapon_changed)
 		_on_ammo_changed(_weapon.get_magazine(), _weapon.get_reserve())
+		_on_weapon_changed(_weapon.get_weapon_index(), _weapon.get_weapon_name())
 
 	_on_health_changed(player.health, GameConfig.PLAYER_MAX_HEALTH)
 	_reload_bar_bg.visible = false
@@ -159,6 +162,11 @@ func _build_status_labels() -> void:
 	_ammo_label = _make_label("30 / 240", FONT_SIZE_BIG, COLOR_HUD)
 	_anchor(_ammo_label, Vector2(0.0, 1.0), Vector2(0.0, 1.0), Vector2(24.0, -46.0), Vector2(300.0, -6.0))
 	add_child(_ammo_label)
+
+	# 弹药右边：当前武器名
+	_weapon_label = _make_label("突击步枪", FONT_SIZE_HUD, COLOR_ACCENT)
+	_anchor(_weapon_label, Vector2(0.0, 1.0), Vector2(0.0, 1.0), Vector2(300.0, -42.0), Vector2(620.0, -8.0))
+	add_child(_weapon_label)
 
 
 func _build_health_bar() -> void:
@@ -426,6 +434,10 @@ func _update_damage_overlay() -> void:
 func _on_ammo_changed(magazine: int, reserve: int) -> void:
 	_ammo_label.text = "%d / %d" % [magazine, reserve]
 	_ammo_label.add_theme_color_override("font_color", COLOR_DANGER if magazine <= 5 else COLOR_HUD)
+
+
+func _on_weapon_changed(index: int, display_name: String) -> void:
+	_weapon_label.text = "%s  [%d]" % [display_name, index + 1]
 
 
 func _on_reload_started(_duration: float) -> void:

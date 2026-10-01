@@ -143,10 +143,19 @@ func _apply_look(delta: float) -> void:
 	var sens := base * GameState.sensitivity_scale
 
 	# 水平：转本体。注意鼠标右移应该是视角右转 → 减去。
-	rotate_y(-_look_delta.x * sens)
+	var yaw_delta := -_look_delta.x * sens
+	rotate_y(yaw_delta)
 
 	# 垂直：只动 Head，不动碰撞体。
-	_pitch = clampf(_pitch - _look_delta.y * sens, -GameConfig.PITCH_LIMIT, GameConfig.PITCH_LIMIT)
+	var pitch_delta := -_look_delta.y * sens
+	var before := _pitch
+	_pitch = clampf(_pitch + pitch_delta, -GameConfig.PITCH_LIMIT, GameConfig.PITCH_LIMIT)
+	# 被上下限截断时，实际转过的角度要按截断后的算。
+	pitch_delta = _pitch - before
+
+	# 手里那把枪要滞后一拍才跟上，转身快了会有明显的甩动感。
+	if weapon != null and not is_dead:
+		weapon.notify_look(Vector2(yaw_delta, pitch_delta))
 
 	_look_delta = Vector2.ZERO
 

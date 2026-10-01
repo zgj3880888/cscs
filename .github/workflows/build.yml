@@ -133,6 +133,15 @@ jobs:
       - name: 导入资源
         run: godot --headless --import --path . || true
 
+      # ---------------------------------------------------------------
+      # 6.5) 跑自检。改坏了武器系统 / 角色动画 / 数值表，这一步会先失败，
+      #      省得等导出了才发现问题。退出码非 0 直接中断整个构建。
+      #      --fixed-fps 60 让帧号和秒数严格对应，自检里按帧号写的时间轴才准。
+      # ---------------------------------------------------------------
+      - name: 无头自检
+        run: |
+          godot --headless --fixed-fps 60 --path . res://tools/selftest.tscn
+
       - name: 导出 Android APK
         run: |
           mkdir -p build/android
