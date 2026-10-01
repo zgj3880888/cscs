@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/level.gd" id="2_level"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-52, 38, 0)
+light_color = Color(1, 0.96, 0.9, 1)
+light_energy = 1.15
+shadow_enabled = true
+directional_shadow_max_distance = 90.0
+
+[node name="Level" type="Node3D" parent="."]
+script = ExtResource("2_level")
+
+[node name="Enemies" type="Node3D" parent="."]

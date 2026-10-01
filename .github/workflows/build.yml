@@ -1,0 +1,185 @@
+name: 构建游戏
+
+# 什么时候触发构建：
+#   * 推送到 main / master
+#   * 手动点按钮触发（Actions 页面里的 Run workflow）
+#   * 打 v* 标签（会额外生成一个 Release，产出永久下载链接）
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  workflow_dispatch:
+
+# 打标签发 Release 需要写权限
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: "4.7.2"
+  ANDROID_PRESET: "Android"
+  WINDOWS_PRESET: "Windows Desktop"
+  GAME_NAME: "MobileFPS"
+
+jobs:
+  build:
+    name: 导出 APK 与 Windows 版
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      # ---------------------------------------------------------------
+      # 1) Java。Godot 的安卓导出需要 JDK 17 来生成签名密钥库。
+      # ---------------------------------------------------------------
+      - name: 安装 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # ---------------------------------------------------------------
+      # 2) Android SDK。GitHub 的 ubuntu 构建机自带 SDK，
+      #    这里只补齐 Godot 需要的那几个组件。
+      # ---------------------------------------------------------------
+      - name: 准备 Android SDK 组件
+        run: |
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_SDK_PATH=$SDK" >> "$GITHUB_ENV"
+          echo "Android SDK 位置：$SDK"
+
+          SDKMGR="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMGR" ]; then
+            SDKMGR="$(find "$SDK" -name sdkmanager -type f 2>/dev/null | head -1)"
+          fi
+          echo "sdkmanager：$SDKMGR"
+
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
+          "$SDKMGR" "platform-tools" "build-tools;35.0.0" "platforms;android-35" > /dev/null
+
+          echo "已安装的 build-tools："
+          ls "$SDK/build-tools"
+
+      # ---------------------------------------------------------------
+      # 3) Godot 编辑器 + 导出模板。
+      #    模板必须放进 <版本号>.stable 这个固定名字的目录，Godot 才认。
+      # ---------------------------------------------------------------
+      - name: 下载 Godot 与导出模板
+        run: |
+          cd "$RUNNER_TEMP"
+          BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+
+          wget -q "$BASE/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          wget -q "$BASE/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+
+          unzip -q "Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          sudo chmod +x /usr/local/bin/godot
+
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          unzip -q "Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -d tpl
+          mv tpl/templates/* "$TEMPLATE_DIR/"
+
+          echo "Godot 版本：$(godot --version)"
+          echo "导出模板目录内容："
+          ls "$TEMPLATE_DIR" | head -20
+
+      # ---------------------------------------------------------------
+      # 4) debug 签名密钥库。
+      #    自己用 keytool 生成，而不是指望 Godot 自动创建 —— 更可控。
+      #    debug 包用这个密钥签名就能直接装到手机上，不需要发布密钥。
+      # ---------------------------------------------------------------
+      - name: 生成 debug 签名密钥库
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -keyalg RSA -genkeypair \
+            -alias androiddebugkey \
+            -keypass android \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -validity 10000 \
+            -deststoretype pkcs12
+          echo "密钥库已生成：$(ls -la "$HOME/.android/debug.keystore")"
+
+      # ---------------------------------------------------------------
+      # 5) 把 Android SDK / JDK / 密钥库的位置告诉 Godot。
+      #    这些是"编辑器设置"，无头模式下不会弹出设置界面，
+      #    所以要直接写好配置文件。文件名带小版本号（4.7），不能写错。
+      # ---------------------------------------------------------------
+      - name: 写入 Godot 编辑器设置
+        run: |
+          mkdir -p "$HOME/.config/godot"
+          cat > "$HOME/.config/godot/editor_settings-4.7.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_SDK_PATH"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/debug_keystore = "$HOME/.android/debug.keystore"
+          export/android/debug_keystore_pass = "android"
+          EOF
+
+          echo "写入的设置："
+          cat "$HOME/.config/godot/editor_settings-4.7.tres"
+
+      # ---------------------------------------------------------------
+      # 6) 导入资源并导出两种产物。
+      #    --import 会先把 .godot/ 导入缓存建起来（仓库里没有这个目录）。
+      #    它的退出码在首次导入时不一定可靠，所以真正判断成败
+      #    放在后面"检查产物是否存在"那一步。
+      # ---------------------------------------------------------------
+      - name: 导入资源
+        run: godot --headless --import --path . || true
+
+      - name: 导出 Android APK
+        run: |
+          mkdir -p build/android
+          godot --headless --path . \
+            --export-debug "$ANDROID_PRESET" "build/android/${GAME_NAME}.apk"
+
+      - name: 导出 Windows 版（方便先在电脑上试玩）
+        run: |
+          mkdir -p build/windows
+          godot --headless --path . \
+            --export-release "$WINDOWS_PRESET" "build/windows/${GAME_NAME}.exe"
+
+      - name: 检查产物是否真的生成了
+        run: |
+          echo "=== 构建产物 ==="
+          ls -lh build/android build/windows || true
+
+          MISSING=0
+          if [ ! -f "build/android/${GAME_NAME}.apk" ]; then
+            echo "::error::APK 没有生成，安卓导出失败"
+            MISSING=1
+          fi
+          if [ ! -f "build/windows/${GAME_NAME}.exe" ]; then
+            echo "::error::Windows 版没有生成"
+            MISSING=1
+          fi
+          if [ "$MISSING" -eq 1 ]; then
+            echo "查看上面的导出日志找原因（常见原因是导出预设名字对不上）。"
+            exit 1
+          fi
+          echo "两种产物都生成成功。"
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: MobileFPS-构建产物
+          path: |
+            build/android/*.apk
+            build/windows/*.exe
+          if-no-files-found: error
+
+      # 打 v* 标签时额外发一个 Release，得到永久的下载链接
+      - name: 发布 Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/android/*.apk
+            build/windows/*.exe
+          generate_release_notes: true

@@ -1,0 +1,15 @@
+# Godot 4 的导入缓存和编辑器状态，由引擎自动重建，不需要进版本库
+.godot/
+
+# 导出产物
+build/
+
+# 签名凭据（里面有密钥库路径和密码，绝对不能提交）
+export_credentials.cfg
+*.keystore
+*.jks
+
+# 系统垃圾
+.DS_Store
+Thumbs.db
+desktop.ini
